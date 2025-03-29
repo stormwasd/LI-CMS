@@ -1,0 +1,700 @@
+{% if request.args.get('mode') == 'selector' %}
+    {% extends theme_path('admin/iframe_base.html') %}
+{% else %}
+    {% extends theme_path('admin/base.html') %}
+{% endif %}
+
+{% block title %}附件管理{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <!-- 标题和搜索栏 -->
+        <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white self-start sm:self-center">附件管理</h2>
+            
+            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+
+                <!-- 搜索表单 -->
+                <form action="{{ url_for('admin.manage_files') }}" method="get" 
+                      class="flex items-center w-full sm:w-auto">
+                    <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                        <!-- 搜索类型下拉框 -->
+                        <select name="type" 
+                                class="px-4 py-2 bg-gray-50 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-600 transition-colors duration-200">
+                            <option value="filename" {% if search_type == 'filename' %}selected{% endif %}>文件名</option>
+                            <option value="type" {% if search_type == 'type' %}selected{% endif %}>类型</option>
+                            <option value="uploader" {% if search_type == 'uploader' %}selected{% endif %}>上传者</option>
+                        </select>
+
+                        <!-- 搜索框 -->
+                        <div class="relative flex-1">
+                            <input type="text" 
+                                   name="q" 
+                                   value="{{ search_query }}"
+                                   placeholder="搜索附件..."
+                                   class="w-full sm:w-64 px-4 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-colors duration-200">
+                            <button type="submit" 
+                                    class="absolute right-0 top-0 h-full px-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 修改按钮组容器 -->
+                <div class="flex flex-col sm:flex-row w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-2">
+                    <!-- 上传按钮 -->
+                    <input type="file" id="fileInput" class="hidden" multiple onchange="uploadFiles(this)">
+                    <button onclick="document.getElementById('fileInput').click()"
+                            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            <span>上传文件</span>
+                        </span>
+                    </button>
+
+                    <!-- 设置按钮 -->
+                    <button onclick="showUploadSettings()"
+                            class="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span>上传设置</span>
+                        </span>
+                    </button>
+
+                    <!-- 批量删除按钮 -->
+                    <button id="batchDeleteBtn" 
+                            onclick="batchDelete()"
+                            disabled
+                            class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span>批量删除</span>
+                        </span>
+                    </button>
+                </div>
+
+                <!-- 添加上传进度显示 -->
+                <div id="uploadProgress" class="hidden mt-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        正在上传: <span id="currentFile">0</span>/<span id="totalFiles">0</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 搜索结果统计 -->
+        {% if search_query %}
+        <div class="mb-4 px-4 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                找到 <span class="font-medium text-gray-900 dark:text-white">{{ files.total }}</span> 个匹配的文件
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- 文件列表 -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            <!-- 全选区域 -->
+            <div class="col-span-full flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="selectAll" 
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <label for="selectAll" class="text-sm text-gray-600 dark:text-gray-400">全选</label>
+                </div>
+                {% if request.args.get('mode') == 'selector' %}
+                <button onclick="insertSelectedFiles()" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    批量插入
+                </button>
+                {% endif %}
+            </div>
+
+            {% for file in files.items %}
+            <div class="relative border dark:border-gray-700 rounded-lg overflow-hidden">
+                <!-- 复选框统一放在左上角 -->
+                <div class="absolute top-2 left-2 z-10">
+                    {% if request.args.get('mode') == 'selector' %}
+                    <input type="checkbox" 
+                           class="file-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                           data-url="{{ url_for('static', filename=file.relative_path) }}"
+                           data-name="{{ file.original_filename }}"
+                           data-type="{{ file.file_type }}"
+                           data-ext="{{ file.original_filename.split('.')[-1] }}">
+                    {% else %}
+                    <input type="checkbox" 
+                           class="delete-checkbox rounded border-gray-300 text-red-600 focus:ring-red-500"
+                           data-id="{{ file.id }}">
+                    {% endif %}
+                </div>
+
+                <!-- 文件预览 -->
+                <div class="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-900 cursor-pointer" 
+                     onclick="showFilePreview('{{ file.file_path }}', '{{ file.file_type }}', '{{ file.original_filename }}')">
+                    {% if file.file_type.startswith('image/') or file.file_type.split('/')[-1] in ['jpg', 'jpeg', 'webp', 'png', 'gif', 'bmp'] %}
+                        <img src="{{ file.file_path }}" alt="{{ file.original_filename }}" 
+                             class="object-cover w-full h-full">
+                    {% elif file.file_type.startswith('video/') or file.file_type.split('/')[-1] in ['mp4'] %}
+                        <div class="relative w-full h-full">
+                            <video src="{{ file.file_path }}" class="w-full h-full object-cover">
+                                您的浏览器不支持视频标签
+                            </video>
+                            <!-- 播放图标 -->
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="flex items-center justify-center">
+                            <svg class="w-8 h-8 sm:w-12 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 文件信息 -->
+                <div class="p-3 sm:p-4">
+                    <!-- 文件名(可编辑) -->
+                    <div class="mb-1 sm:mb-2 group">
+                        <div class="relative">
+                            <input type="text" 
+                                   value="{{ file.original_filename }}"
+                                   data-file-id="{{ file.id }}"
+                                   onchange="updateFileName(this)"
+                                   class="w-full text-xs sm:text-sm font-medium text-gray-900 dark:text-white 
+                                          bg-transparent border-0 border-b border-transparent 
+                                          group-hover:border-gray-200 dark:group-hover:border-gray-700
+                                          focus:border-blue-500 dark:focus:border-blue-400
+                                          focus:ring-0 px-1 py-1
+                                          transition-colors duration-200">
+                            <!-- 编辑图标 -->
+                            <svg class="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 space-y-0.5 sm:space-y-1">
+                        <p>类型：{{ file.file_type }}</p>
+                        <p>大小：{{ (file.file_size / 1024)|round(2) }} KB</p>
+                        <p>上传时间：{{ file.upload_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p>上传者：{{ file.uploader.username }}</p>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="mt-2 sm:mt-4 flex justify-end space-x-2">
+                        {% if request.args.get('mode') == 'selector' %}
+                        <button type="button"
+                                onclick="insertToEditor('{{ file.file_path }}', '{{ file.file_type }}', '{{ file.original_filename }}')"
+                                class="text-xs sm:text-sm text-blue-600 hover:text-blue-800">
+                            插入
+                        </button>
+                        {% endif %}
+                        <button type="button"
+                                onclick="confirmDelete({{ file.id }})"
+                                class="text-xs sm:text-sm text-red-600 hover:text-red-800">
+                            删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-12">
+                <p class="text-gray-500 dark:text-gray-400">暂无文件</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 分页 -->
+        {% if files.pages > 1 %}
+        <div class="mt-6">
+            {% include theme_path('components/pagination.html') %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 修改模态框结构 -->
+<div id="filePreviewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeModalOnOutsideClick(event)">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="previewTitle"></h3>
+                    <button onclick="hideFilePreview()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- 预览内容 -->
+                <div id="previewContent" class="mb-6"></div>
+                <!-- 外链地址 -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            文件地址
+                        </label>
+                        <div class="flex">
+                            <input type="text" id="fileUrl" readonly
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg 
+                                          bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <button onclick="copyToClipboard('fileUrl')"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700">
+                                复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加上传设置模态框 -->
+<div id="uploadSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeModalOnOutsideClick(event)">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full" onclick="event.stopPropagation()">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">上传设置</h3>
+                    <button onclick="hideUploadSettings()" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="uploadSettingsForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            允许上传的文件类型
+                        </label>
+                        <input style="outline:none" type="text" name="upload_allowed_types"
+                               value="{{ site_config.get_config('upload_allowed_types') }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                               placeholder=".jpg,.jpeg,.png,.gif,.webp,.mp4">
+                        <p class="mt-1 text-sm text-gray-500">多个类型用逗号分隔，例如: .jpg,.png,.mp4</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            最大上传大小(MB)
+                        </label>
+                        <input style="outline:none" type="number" name="upload_max_size"
+                               value="{{ site_config.get_config('upload_max_size') }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                               min="1" max="100">
+                    </div>
+                    
+                    <div class="flex justify-end space-x-4 mt-6">
+                        <button type="button" onclick="hideUploadSettings()"
+                                class="px-4 py-2 text-gray-700 hover:text-gray-900">
+                            取消
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加相关 JavaScript -->
+<script>
+function confirmDelete(fileId) {
+    showAlert('确定要删除这个文件吗？此操作不可恢复！', 'warning', '确认删除', function() {
+        fetch(`{{ admin_url }}/files/${fileId}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        }).then(response => {
+            if (response.ok) {
+                showAlert('文件已删除', 'success', '成功');
+                setTimeout(() => window.location.reload(), 300);
+            } else {
+                showAlert('删除失败', 'error', '错误');
+            }
+        }).catch(error => {
+            showAlert('删除失败：' + error, 'error', '错误');
+        });
+    });
+}
+
+async function uploadFiles(input) {
+    const files = input.files;
+    if (!files.length) return;
+
+    // 显示进度条
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const currentFileSpan = document.getElementById('currentFile');
+    const totalFilesSpan = document.getElementById('totalFiles');
+    
+    progressDiv.classList.remove('hidden');
+    totalFilesSpan.textContent = files.length;
+    
+    // 遍历上传文件
+    for (let i = 0; i < files.length; i++) {
+        currentFileSpan.textContent = i + 1;
+        const progress = ((i + 1) / files.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        
+        const formData = new FormData();
+        formData.append('upload', files[i]);
+        
+        try {
+            const response = await fetch('{{ url_for("blog.upload_image") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || '上传失败');
+            }
+            
+        } catch (error) {
+            showAlert(`文件 ${files[i].name} 上传失败: ${error.message}`, 'error');
+        }
+    }
+    
+    // 上传完成后
+    progressDiv.classList.add('hidden');
+    progressBar.style.width = '0%';
+    input.value = ''; // 清空input
+    
+    // 刷新文件列表
+    //location.reload();
+
+    showAlert(`批量上传文件完毕`, 'success', '完成' , function() {
+        setTimeout(() => window.location.reload(), 200);
+    });
+}
+
+function showFilePreview(filePath, fileType, fileName) {
+    const modal = document.getElementById('filePreviewModal');
+    const content = document.getElementById('previewContent');
+    const title = document.getElementById('previewTitle');
+    const fileUrl = document.getElementById('fileUrl');
+    
+    // 设置标题和URL
+    title.textContent = fileName;
+    fileUrl.value = window.location.origin + filePath;
+    
+    // 根据文件类型设置预览内容
+    if (fileType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(filePath)) {
+        content.innerHTML = `<img src="${filePath}" alt="${fileName}" class="max-w-full h-auto">`;
+    } else if (fileType.startsWith('video/') || /\.mp4$/i.test(filePath)) {
+        content.innerHTML = `
+            <video controls autoplay class="max-w-full h-auto">
+                <source src="${filePath}" type="video/mp4">
+                您的浏览器不支持视频标签
+            </video>`;
+    } else {
+        content.innerHTML = `
+            <div class="text-center py-8">
+                <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <p class="mt-4 text-gray-600">此文件类型不支持预览</p>
+            </div>`;
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function hideFilePreview() {
+    const modal = document.getElementById('filePreviewModal');
+    const content = document.getElementById('previewContent');
+    modal.classList.add('hidden');
+    content.innerHTML = ''; // 清空预览内容
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    document.execCommand('copy');
+    showAlert('已复制到剪贴板', 'success', '成功');
+}
+
+function closeModalOnOutsideClick(event) {
+    const modal = document.getElementById('filePreviewModal');
+    const modalContent = modal.querySelector('.bg-white');
+    
+    // 如果点击的是模态框本身（黑色背景）而不是内容区域
+    if (!modalContent.contains(event.target)) {
+        hideFilePreview();
+    }
+}
+
+function showUploadSettings() {
+    document.getElementById('uploadSettingsModal').classList.remove('hidden');
+}
+
+function hideUploadSettings() {
+    document.getElementById('uploadSettingsModal').classList.add('hidden');
+}
+
+// 处理设置表单提交
+document.getElementById('uploadSettingsForm').onsubmit = function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("admin.save_upload_settings") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'error', '错误');
+        } else {
+            showAlert('设置已保存', 'success', '成功');
+            hideUploadSettings();
+        }
+    })
+    .catch(error => {
+        showAlert('保存失败: ' + error, 'error', '错误');
+    });
+};
+
+// 更新文件名
+function updateFileName(input) {
+    const fileId = input.dataset.fileId;
+    const newName = input.value.trim();
+    const originalValue = input.defaultValue;
+    
+    if (!newName) {
+        showAlert('文件名不能为空', 'error', '错误');
+        input.value = originalValue;
+        return;
+    }
+    
+    fetch(`{{ admin_url }}/files/${fileId}/rename`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ name: newName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'error', '错误');
+            input.value = originalValue;
+        } else {
+            showAlert('文件名已更新', 'success', '成功');
+            input.defaultValue = newName;  // 更新默认值
+        }
+    })
+    .catch(error => {
+        showAlert('更新失败: ' + error, 'error', '错误');
+        input.value = originalValue;
+    });
+}
+
+// 插入文件到编辑器
+function insertToEditor(url, fileType, fileName) {
+    let content = '';
+    
+    // 处理文件类型
+    let type = '';
+    if (fileType.includes('/')) {
+        // 如果是 MIME 类型 (如 'image/jpeg')
+        type = fileType.split('/')[1].toLowerCase();
+    } else {
+        // 如果是文件扩展名
+        type = fileType.toLowerCase();
+    }
+    
+    // 从文件名获取扩展名作为备选
+    const fileExt = fileName.split('.').pop().toLowerCase();
+    
+    // 图片类型
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(type) || 
+        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExt)) {
+        content = `<img src="${url}" alt="${fileName}" style="max-width:100%;">`;
+    }
+    // 视频类型
+    else if (['mp4', 'webm', 'ogg', 'mpeg', 'quicktime'].includes(type) || 
+             ['mp4', 'webm', 'ogg'].includes(fileExt)) {
+        content = `<video controls style="max-width:100%;"><source src="${url}" type="video/${type}">您的浏览器不支持视频标签</video>`;
+    }
+    // 音频类型
+    else if (['mp3', 'wav', 'ogg', 'mpeg'].includes(type) || 
+             ['mp3', 'wav', 'ogg'].includes(fileExt)) {
+        content = `<audio controls><source src="${url}" type="audio/${type}">您的浏览器不支持音频标签</audio>`;
+    }
+    // 其他类型
+    else {
+        content = `<a href="${url}" target="_blank">${fileName}</a>`;
+    }
+    
+    console.log('File type:', type, 'Extension:', fileExt, 'Content:', content); // 调试用
+    
+    // 向父窗口发送消息
+    window.parent.postMessage({
+        type: 'fileSelected',
+        file: {
+            url: url,
+            name: fileName,
+            file_type: fileType,
+            content: content
+        }
+    }, '*');
+}
+
+// 全选功能
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.file-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+});
+
+// 批量插入选中的文件
+function insertSelectedFiles() {
+    const selectedFiles = document.querySelectorAll('.file-checkbox:checked');
+    if(!selectedFiles.length) {
+        showAlert('请至少选择一个文件', 'warning');
+        return;
+    }
+
+    const files = Array.from(selectedFiles).map(checkbox => {
+        const url = checkbox.dataset.url;
+        const fileName = checkbox.dataset.name;
+        const fileType = checkbox.dataset.type;
+        const fileExt = fileName.split('.').pop().toLowerCase();
+        
+        let content = '';
+        
+        // 根据扩展名生成对应的HTML
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExt)) {
+            content = `<img src="${url}" alt="${fileName}" style="max-width:100%;">`;
+        }
+        else if (['mp4', 'webm', 'ogg'].includes(fileExt)) {
+            content = `<video controls style="max-width:100%;"><source src="${url}" type="video/${fileExt}">您的浏览器不支持视频标签</video>`;
+        }
+        else if (['mp3', 'wav', 'ogg'].includes(fileExt)) {
+            content = `<audio controls><source src="${url}" type="audio/${fileExt}">您的浏览器不支持音频标签</audio>`;
+        }
+        else {
+            content = `<a href="${url}" target="_blank">${fileName}</a>`;
+        }
+
+        return {
+            url,
+            name: fileName,
+            file_type: fileType,
+            content
+        };
+    });
+
+    // 向父窗口发送批量文件信息
+    window.parent.postMessage({
+        type: 'filesSelected',
+        files: files
+    }, '*');
+}
+
+// 监听复选框变化,更新删除按钮状态
+document.querySelectorAll('.delete-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBatchDeleteButton);
+});
+
+// 更新批量删除按钮状态
+function updateBatchDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.delete-checkbox:checked');
+    const deleteBtn = document.getElementById('batchDeleteBtn');
+    deleteBtn.disabled = checkedBoxes.length === 0;
+}
+
+// 批量删除功能
+function batchDelete() {
+    const selectedFiles = document.querySelectorAll('.delete-checkbox:checked');
+    if(!selectedFiles.length) return;
+
+    const fileIds = Array.from(selectedFiles).map(cb => cb.dataset.id);
+
+    showAlert('确定要删除选中的文件吗？此操作不可恢复！', 'warning', '确认删除', async () => {
+        let successCount = 0;
+        let failCount = 0;
+
+        // 显示进度提示
+        showAlert(`正在删除文件...`, 'info', null, null, false);
+
+        // 依次删除文件
+        for(const fileId of fileIds) {
+            try {
+                const response = await fetch(`{{ admin_url }}/files/${fileId}/delete`, {
+                    method: 'POST',  // 改为 POST 方法
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                });
+
+                if(response.ok) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch(error) {
+                failCount++;
+                console.error(`删除文件 ${fileId} 失败:`, error);
+            }
+        }
+
+        // 显示删除结果
+        if(failCount === 0) {
+            showAlert(`成功删除 ${successCount} 个文件`, 'success');
+        } else {
+            showAlert(`删除完成: ${successCount} 个成功, ${failCount} 个失败`, 'warning');
+        }
+
+        // 刷新页面
+        setTimeout(() => location.reload(), 400);
+    });
+}
+
+// 添加全选删除功能
+document.getElementById('selectAll')?.addEventListener('change', function() {
+    document.querySelectorAll('.delete-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+    updateBatchDeleteButton();
+});
+</script>
+{% endblock %} 

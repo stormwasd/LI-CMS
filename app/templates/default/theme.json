@@ -1,0 +1,26 @@
+{
+    "name": "PPress 默认主题",
+    "description": "一个简洁IOS风现代的博客主题",
+    "version": "1.0.1",
+    "author": "言道子",
+    "website": "https://gitee.com/fojie/PPress",
+    "settings": {
+        "qq": "575732563",
+        "wx": "weixin",
+        "email": "ponyj@qq.com",
+        "github_url": "https://github.com/kzmnlz/flask-iosblog",
+        "gitee_url": "https://gitee.com/fojie/PPress"
+    },
+    "article_fields": {
+        "thumbnail": {
+            "name": "缩略图",
+            "type": "image",
+            "description": "文章缩略图"
+        },
+        "subtitle": {
+            "name": "副标题",
+            "type": "text",
+            "description": "文章副标题"
+        }
+    }
+} 

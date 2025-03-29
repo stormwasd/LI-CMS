@@ -1,0 +1,49 @@
+# Python字节码文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境
+.env
+.venv
+env/
+venv/
+ENV/
+.virtualenv/
+
+# 数据库文件
+*.db
+*.sqlite3
+instance/
+
+# 日志文件
+*.log
+
+# 本地配置文件
+config/database.py
+
+# 临时文件
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 生成的文件
+li-cms_db.lock
+
+# 上传的文件
+app/static/uploads/
+
+# 缓存和会话文件
+.webassets-cache/
+.sass-cache/
+flask_session/
+
+# 迁移文件夹
+migrations/
+
+# 构建输出
+dist/
+build/
+*.egg-info/ 

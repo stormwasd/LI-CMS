@@ -1,0 +1,13 @@
+Flask
+Flask_Caching
+Flask_Login
+flask_sqlalchemy
+flask_wtf
+Jinja2
+MarkupSafe
+Pillow
+PyMySQL
+python-slugify
+SQLAlchemy
+Werkzeug
+flask-migrate

@@ -1,0 +1,105 @@
+{% extends theme_path('base.html') %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+
+
+<!--比如你添加了一个字段:
+字段名: author
+字段值: PPress
+在模板中就可以这样使用
+{{ page.fields.author }}  #会显示"PPress"
+
+或者遍历所有字段:
+{% for key, value in page.fields.items() %}
+<div>
+    <strong>{{ key }}:</strong> {{ value }}
+</div>
+{% endfor %}-->
+
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {{ page.title }}
+        </h1>
+        <div class="prose dark:prose-invert max-w-none">
+            {{ page.content|safe }}
+        </div>
+    </div>
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        {% for key, value in page.fields.items() %}
+        <div class="mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ key }}</h3>
+            <p class="text-gray-600 dark:text-gray-300">{{ value }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div class="mb-4">
+            <p class="text-gray-600 dark:text-gray-300">{{ page.fields.key1 }}</p>
+        </div>
+    </div>
+
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div class="mb-4">
+            <img src="{{ page.fields.imgvalue }}" class="text-gray-600 dark:text-gray-300">
+        </div>
+    </div>
+
+    {% if page.allow_comment %}
+    <div class="mt-6">
+        {% with 
+            article=None,
+            custom_page=page,
+            comment_data=comment_data
+        %}
+            {% include theme_path('components/comment.html') %}
+        {% endwith %}
+    </div>
+    {% endif %}
+</div>
+
+
+    <script>
+        function replyTo(parentId, replyToName, replyToId = null) {
+            document.getElementById('parentCommentId').value = parentId;
+            document.getElementById('replyToCommentId').value = replyToId || '';
+            document.getElementById('replyingToName').textContent = replyToName;
+            document.getElementById('replyingTo').classList.remove('hidden');
+
+            // 滚动到评论框
+            const commentForm = document.querySelector('form');
+            commentForm.scrollIntoView({ behavior: 'smooth' });
+            commentForm.querySelector('textarea').focus();
+        }
+
+        function cancelReply() {
+            document.getElementById('parentCommentId').value = '';
+            document.getElementById('replyToCommentId').value = '';
+            document.getElementById('replyingTo').classList.add('hidden');
+        }
+
+        function deleteComment(commentId) {
+            showAlert('确定要删除这条评论吗？此操作不可恢复！', 'warning', '确认删除', function() {
+                fetch(`/comment/${commentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        showAlert('评论已删除', 'success', '成功');
+                        setTimeout(() => location.reload(), 200);
+                    } else {
+                        response.json().then(data => {
+                            showAlert(data.error || '删除失败', 'error', '错误');
+                        });
+                    }
+                }).catch(error => {
+                    showAlert('删除失败', 'error', '错误');
+                });
+            });
+        }
+    </script>
+
+{% endblock %}

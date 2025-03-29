@@ -1,0 +1,451 @@
+{% extends theme_path('admin/base.html') %}
+
+{% block title %}标签管理{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="bg-white rounded-lg shadow-sm">
+        <div class="px-6 py-4 border-b">
+            <div class="flex flex-col sm:flex-row justify-between items-stretch lg:items-center space-y-4 lg:space-y-0">
+                <h2 class="text-xl font-bold">标签管理</h2>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full lg:w-auto">
+                    <form method="get" 
+                         class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 flex-1">
+                        <select name="search_type" 
+                               class="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto">
+                            <option value="name" {% if search_type != 'id' %}selected{% endif %}>名称</option>
+                            <option value="id" {% if search_type == 'id' %}selected{% endif %}>ID</option>
+                        </select>
+                        <div class="relative flex-1">
+                            <input type="text" name="q" 
+                                   value="{{ search_query }}"
+                                   placeholder="搜索标签..." 
+                                  class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <button type="submit" 
+                               class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                            搜索
+                        </button>
+                    </form>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="updateAllTagCounts()" 
+                                    class="inline-flex items-center px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-all duration-200 shadow-sm hover:shadow">
+                                <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
+                                </svg>
+                                <span class="hidden sm:inline">更新计数</span>
+                                <span class="sm:hidden">更新</span>
+                            </button>
+
+                            <!--<button onclick="batchSetTagsAccessMode('slug')"
+                                    class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow">
+                                <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z">
+                                    </path>
+                                </svg>
+                                <span class="hidden sm:inline">使用缩略名</span>
+                                <span class="sm:hidden">缩略名</span>
+                            </button>
+
+                            <button onclick="batchSetTagsAccessMode('id')" 
+                                    class="inline-flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow">
+                                <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4">
+                                    </path>
+                                </svg>
+                                <span class="hidden sm:inline">使用 ID</span>
+                                <span class="sm:hidden">ID</span>
+                            </button>-->
+
+                            <button onclick="showAddTagModal()" 
+                                    class="inline-flex items-center px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all duration-200 shadow-sm hover:shadow">
+                                <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span class="hidden sm:inline">添加标签</span>
+                                <span class="sm:hidden">添加</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">缩略名</th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">访问方式</th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">文章数</th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for tag in pagination.items %}
+                    <tr data-tag-id="{{ tag.id }}">
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ tag.id }}</td>
+                        <td class="px-4 sm:px-6 py-4">
+                            <a href="{{ url_for('admin.articles', search_type='tag', q=tag.name) }}" 
+                               class="hover:text-blue-600">
+                                <span class="px-2 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-full hover:bg-blue-200">
+                                    {{ tag.name }}
+                                </span>
+                            </a>
+                        </td>
+                        <td class="px-4 sm:px-6 py-4">
+                            <span class="text-gray-600">{{ tag.slug }}</span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-4">
+                            {% if tag.use_slug %}
+                            <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">使用别名</span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">使用 ID</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <span class="article-count">{{ tag.article_count }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex items-center space-x-4">
+                                <button onclick="showEditTagModal({{ tag.id }}, '{{ tag.name }}', '{{ tag.slug }}', {{ 'true' if tag.use_slug else 'false' }})"
+                                        class="text-blue-600 hover:text-blue-900">
+                                    编辑
+                                </button>
+                                <button onclick="deleteTag({{ tag.id }})"
+                                        class="text-red-600 hover:text-red-900">
+                                    删除
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if pagination.pages > 1 %}
+        <div class="px-6 py-4 mt-4 border-t">
+            {% with endpoint='admin.tags', kwargs={'q': search_query, 'search_type': search_type} %}
+            {% include 'components/pagination.html' %}
+            {% endwith %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加标签模态框 -->
+<div id="addTagModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-medium">添加标签</h3>
+        </div>
+        <form id="addTagForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                <input type="text" name="name" required
+                       class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">缩略名</label>
+                <input type="text" name="slug" id="tagSlug"
+                       class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="可选,留空自动生成">
+            </div>
+            <div class="mb-4">
+                <label class="flex items-center">
+                    <input type="checkbox" name="use_slug" id="useSlug" class="rounded border-gray-300">
+                    <span class="ml-2 text-sm text-gray-600">使用缩略名访问</span>
+                </label>
+            </div>
+        </form>
+        <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+            <button onclick="hideAddTagModal()"
+                    class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                取消
+            </button>
+            <button onclick="addTag()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                添加
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑标签模态框 -->
+<div id="editTagModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-lg font-medium">编辑标签</h3>
+        </div>
+        <form id="editTagForm" class="p-6 space-y-4">
+            <input type="hidden" name="tag_id">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                <input type="text" name="name" required
+                       class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">缩略名</label>
+                <input type="text" name="slug" id="tagSlug"
+                       class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="可选,留空自动生成">
+            </div>
+            <div class="mb-4">
+                <label class="flex items-center">
+                    <input type="checkbox" name="use_slug" id="useSlug" class="rounded border-gray-300">
+                    <span class="ml-2 text-sm text-gray-600">使用缩略名访问</span>
+                </label>
+            </div>
+        </form>
+        <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+            <button onclick="hideEditTagModal()"
+                    class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                取消
+            </button>
+            <button onclick="updateTag()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                保存
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAddTagModal() {
+    document.getElementById('addTagModal').classList.remove('hidden');
+    document.getElementById('addTagModal').classList.add('flex');
+}
+
+function hideAddTagModal() {
+    document.getElementById('addTagModal').classList.add('hidden');
+    document.getElementById('addTagModal').classList.remove('flex');
+    document.getElementById('addTagForm').reset();
+}
+
+function addTag() {
+    const form = document.getElementById('addTagForm');
+    const formData = new FormData(form);
+    
+    // 添加 use_slug 字段
+    formData.set('use_slug', form.use_slug.checked);
+    
+    fetch('{{ url_for("admin.add_tag") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'error', '错误');
+        } else {
+            showAlert(data.message, 'success', '成功');
+            setTimeout(() => location.reload(), 100);
+        }
+    });
+}
+
+function showEditTagModal(id, name, slug, use_slug) {
+    const form = document.getElementById('editTagForm');
+    form.tag_id.value = id;
+    form.name.value = name;
+    form.slug.value = slug || '';
+    form.use_slug.checked = use_slug;
+    
+    document.getElementById('editTagModal').classList.remove('hidden');
+    document.getElementById('editTagModal').classList.add('flex');
+}
+
+function hideEditTagModal() {
+    document.getElementById('editTagModal').classList.add('hidden');
+    document.getElementById('editTagModal').classList.remove('flex');
+    document.getElementById('editTagForm').reset();
+}
+
+function updateTag() {
+    const form = document.getElementById('editTagForm');
+    const formData = new FormData(form);
+    const tagId = form.tag_id.value;
+    
+    // 添加 use_slug 字段
+    formData.set('use_slug', form.use_slug.checked);
+    
+    fetch(`{{ admin_url }}/tags/${tagId}/edit`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert(data.error, 'error', '错误');
+        } else {
+            showAlert(data.message, 'success', '成功');
+            // 更新页面上的标签信息
+            setTimeout(() => location.reload(), 100);
+            hideEditTagModal();
+        }
+    });
+}
+
+function deleteTag(tagId) {
+    showAlert('确定要删除此标签吗？', 'warning', '确认删除', function() {
+        fetch(`{{ admin_url }}/tags/${tagId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        }).then(response => {
+            if (response.ok) {
+                showAlert('标签删除成功', 'success', '成功');
+                setTimeout(() => location.reload(), 100);
+            } else {
+                response.json().then(data => {
+                    showAlert(data.error, 'error', '错误');
+                });
+            }
+        });
+    });
+}
+
+// 页面加载完成后自动更新标签计数
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取当前页面所有标签ID
+    const tagElements = document.querySelectorAll('[data-tag-id]');
+
+    const tagIds = Array.from(tagElements).map(el => parseInt(el.dataset.tagId));
+
+    if (tagIds.length > 0) {
+        // 调用更新API
+        fetch('{{ admin_url }}/tags/update-counts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ tag_ids: tagIds })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('请求失败');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('更新标签计数:', data);
+            if (data.error) {
+                console.error('更新标签计数失败:', data.error);
+                return;
+            }
+            if (data.success && data.updated.length > 0) {
+                // 更新页面显示
+                data.updated.forEach(item => {
+                    const countEl = document.querySelector(`[data-tag-id="${item.id}"] .article-count`);
+                    if (countEl) {
+                        console.log(`更新标签 ${item.id} 的计数为 ${item.new_count}`);
+                        countEl.textContent = item.new_count;
+                        countEl.classList.add('text-green-600', 'animate-pulse');
+                        setTimeout(() => {
+                            countEl.classList.remove('text-green-600', 'animate-pulse');
+                        }, 2000);
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('更新标签计数失败:', error);
+        });
+    } else {
+        console.log('没有找到标签元素'); // 调试信息
+    }
+});
+
+function updateAllTagCounts() {
+    showAlert(
+        '此操作会重新计算所有标签的文章数，在标签计数不准确时使用。确定要继续吗？', 
+        'warning', 
+        '更新所有标签计数', 
+        function() {
+            showAlert('正在更新所有标签计数...', 'info', null, null, false);
+            
+            fetch('{{ admin_url }}/tags/update-all-counts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert(data.error, 'error', '错误');
+                    return;
+                }
+                if (data.success) {
+                    showAlert('所有标签计数已更新', 'success', '成功');
+                    setTimeout(() => location.reload(), 200);
+                }
+            })
+            .catch(error => {
+                showAlert('更新失败: ' + error, 'error', '错误');
+            });
+        },
+        true
+    );
+}
+
+function batchSetTagsAccessMode(mode) {
+    const warningMessage = mode === 'slug' 
+        ? '确定要将所有标签设置为使用缩略名访问吗？\n\n注意：\n1. 此操作会影响所有标签的访问方式\n2. 会自动为没有缩略名的标签生成缩略名\n3. 可能会影响现有的文章链接\n4. 建议在流量较少时执行此操作'
+        : '确定要将所有标签设置为使用ID访问吗？\n\n注意：\n1. 此操作会影响所有标签的访问方式\n2. 会影响SEO效果，不推荐使用\n3. 可能会影响现有的文章链接\n4. 建议在流量较少时执行此操作';
+    
+    showAlert(
+        warningMessage,
+        'warning',
+        mode === 'slug' ? '设置为缩略名访问' : '设置为ID访问',
+        function() {
+            showAlert('正在更新所有标签...', 'info', null, null, false);
+            
+            fetch('{{ admin_url }}/tags/batch-set-access-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ mode: mode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showAlert(data.error, 'error', '错误');
+                } else {
+                    showAlert(data.message, 'success', '成功');
+                    setTimeout(() => location.reload(), 500);
+                }
+            })
+            .catch(error => {
+                showAlert('操作失败: ' + error, 'error', '错误');
+            });
+        },
+        true  // 显示取消按钮
+    );
+}
+</script>
+{% endblock %} 

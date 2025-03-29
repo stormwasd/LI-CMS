@@ -1,0 +1,282 @@
+{% extends theme_path('base.html') %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block meta %}
+<!-- 文章页面特定的 meta 标签 -->
+<meta name="author" content="{{ article.author.display_name }}">
+<meta name="keywords" content="{% for tag in article.tags %}{{ tag.name }}{% if not loop.last %},{% endif %}{% endfor %}">
+<meta name="description" content="{{ article.content[:200]|striptags }}">
+<style>
+    /* 增加文章段落的行距 */
+    .article-content p {
+        margin-top: 1.5em;    /* 段落上方间距 */
+        margin-bottom: 1.5em;  /* 段落下方间距 */
+        line-height: 1.8;      /* 行高 */
+    }
+
+    /* 第一个段落不需要上边距 */
+    .article-content p:first-child {
+        margin-top: 0;
+    }
+
+    /* 最后一个段落不需要下边距 */
+    .article-content p:last-child {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- 面包屑导航 -->
+    <nav class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <a href="{{ url_for('blog.index') }}" 
+           class="hover:text-gray-700 dark:hover:text-gray-300">
+            首页
+        </a>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+        
+        <!-- 分类导航 -->
+        <div class="flex items-center space-x-2">
+            {% if article.main_category %}
+                <!-- 主分类 -->
+                <a href="{{ url_for('blog.category', id=article.main_category.slug if article.main_category.use_slug else article.main_category.id) }}"
+                   class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                    {{ article.main_category.name }}
+                </a>
+                
+                <!-- 其他分类 -->
+                {% for category in article.categories %}
+                    {% if category != article.main_category %}
+                        <span class="text-gray-400 dark:text-gray-500">/</span>
+                        <a href="{{ url_for('blog.category', id=category.slug if category.use_slug else category.id) }}"
+                           class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                            {{ category.name }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+        <span class="text-gray-700 dark:text-gray-300 truncate max-w-xs">{{ article.title }}</span>
+    </nav>
+
+    <!-- 文章内容 -->
+    <article class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 mb-8" data-article-id="{{ article.id }}">
+        <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{{ article.title }}</h1>
+        
+
+        <!-- 文章作者信息部分 -->
+        {% set author = get_user_info(article.author) %}
+        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-8">
+            <div class="flex items-center flex-shrink-0">
+                <img src="{{ author.avatar }}" alt="avatar" class="w-10 h-10 rounded-full">
+                {% if author.id %}
+                    <a href="{{ url_for('user.author', id=author.id) }}" 
+                       class="ml-2 font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                        {{ author.nickname }}
+                    </a>
+                {% else %}
+                    <span class="ml-2 font-medium text-gray-500">{{ author.nickname }}</span>
+                {% endif %}
+            </div>
+            <div class="flex items-center flex-wrap gap-2">
+                <span>{{ article.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="hidden sm:inline">•</span>
+                <span>阅读 {{ article.view_count }}</span>
+            </div>
+            
+            <!-- 添加文章状态标签 -->
+            {% if article.status != 'public' %}
+            <div class="flex items-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    {% if article.status == 'private' %}
+                        bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                    {% elif article.status == 'password' %}
+                        bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                    {% elif article.status == 'hidden' %}
+                        bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
+                    {% elif article.status == 'pending' %}
+                        bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                    {% endif %}">
+                    {% if article.status == 'private' %}
+                        私密
+                    {% elif article.status == 'password' %}
+                        密码保护
+                    {% elif article.status == 'hidden' %}
+                        隐藏
+                    {% elif article.status == 'pending' %}
+                        待审核
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            
+            <!-- 添加评论状态标签 -->
+            {% if not article.allow_comment %}
+            <div class="flex items-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                             bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                    评论已关闭
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 文章内容 -->
+        <div class="article-content prose dark:prose-invert max-w-none mb-8">
+            {{ article.content|safe }}
+        </div>
+
+        <!-- 在文章内容下方添加标签显示 -->
+        <div class="flex flex-wrap items-center gap-2 mt-4">
+            <span class="text-gray-600 dark:text-gray-400">文章标签：</span>
+            {% for tag in article.tags %}
+            <a href="{{ url_for('blog.tag', tag_id_or_slug=tag.id if not tag.use_slug else tag.slug) }}"
+               class="text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full mr-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+                {{ tag.name }}
+            </a>
+            {% else %}
+            <span class="text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full mr-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+                暂无标签
+            </span>
+            {% endfor %}
+        </div>
+
+    </article>
+
+    <!-- 上一篇/下一篇导航 -->
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- 上一篇 -->
+        <div>
+            {% if prev_article %}
+            <a href="{{ ArticleUrlGenerator.generate(prev_article.id, prev_article.category_id, prev_article.created_at) }}" 
+               class="group block bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 hover:shadow-md transition-all duration-200">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">上一篇</div>
+                        <div class="text-gray-900 dark:text-gray-100 font-medium line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                            {{ prev_article.title }}
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <div class="block bg-white/50 dark:bg-gray-800/50 rounded-lg shadow-sm p-4 hover:shadow-sm transition-all duration-200">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mb-1">上一篇</div>
+                        <div class="text-gray-400 dark:text-gray-500 font-medium">已是第一篇</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- 下一篇 -->
+        <div>
+            {% if next_article %}
+            <a href="{{ ArticleUrlGenerator.generate(next_article.id, next_article.category_id, next_article.created_at) }}" 
+               class="group block bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 hover:shadow-md transition-all duration-200">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1 min-w-0 pr-3">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1 text-right">下一篇</div>
+                        <div class="text-gray-900 dark:text-gray-100 font-medium line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 text-right">
+                            {{ next_article.title }}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <div class="block bg-white/50 dark:bg-gray-800/50 rounded-lg shadow-sm p-4 hover:shadow-sm transition-all duration-200">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1 min-w-0 pr-3">
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mb-1 text-right">下一篇</div>
+                        <div class="text-gray-400 dark:text-gray-500 font-medium text-right">已是最后一篇</div>
+                    </div>
+                    <div class="flex-shrink-0 p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+    {% if render_recommendations is defined %}
+    {{ render_recommendations()|safe }}
+    {% endif %}
+
+    {% include 'components/comment.html' %}
+
+</div>
+
+<script>
+function replyTo(parentId, replyToName, replyToId = null) {
+    document.getElementById('parentCommentId').value = parentId;
+    document.getElementById('replyToCommentId').value = replyToId || '';
+    document.getElementById('replyingToName').textContent = replyToName;
+    document.getElementById('replyingTo').classList.remove('hidden');
+    
+    // 滚动到评论框
+    const commentForm = document.querySelector('form');
+    commentForm.scrollIntoView({ behavior: 'smooth' });
+    commentForm.querySelector('textarea').focus();
+}
+
+function cancelReply() {
+    document.getElementById('parentCommentId').value = '';
+    document.getElementById('replyToCommentId').value = '';
+    document.getElementById('replyingTo').classList.add('hidden');
+}
+
+function deleteComment(commentId) {
+    showAlert('确定要删除这条评论吗？此操作不可恢复！', 'warning', '确认删除', function() {
+        fetch(`/comment/${commentId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        }).then(response => {
+            if (response.ok) {
+                showAlert('评论已删除', 'success', '成功');
+                setTimeout(() => location.reload(), 200);
+            } else {
+                response.json().then(data => {
+                    showAlert(data.error || '删除失败', 'error', '错误');
+                });
+            }
+        }).catch(error => {
+            showAlert('删除失败', 'error', '错误');
+        });
+    });
+}
+</script>
+
+
+
+{% endblock %} 
