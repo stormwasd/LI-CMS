@@ -52,11 +52,13 @@ def update_db_config(db_type):
     except Exception as e:
         print(f"\n更新数据库配置失败：{str(e)}")
 
-def init_db(db_type='mysql', site_name='LI-CMS'):
+def init_db(db_type='mysql', site_name='LI-CMS', admin_nickname='skyscraper', admin_email='2565706797@qq.com'):
     """初始化数据库
     Args:
         db_type (str): 数据库类型 'mysql' 或 'sqlite'
         site_name (str): 网站名称
+        admin_nickname (str): 管理员昵称
+        admin_email (str): 管理员邮箱
     """
     # 检查数据库锁
     if check_db_lock():
@@ -103,8 +105,8 @@ def init_db(db_type='mysql', site_name='LI-CMS'):
         # 创建管理员用户
         admin = User(
             username='admin',
-            nickname=f'skyscraper',
-            email='2565706797@qq.com',
+            nickname=admin_nickname,
+            email=admin_email,
             role='admin'
         )
         admin.set_password('123456')
@@ -149,7 +151,7 @@ def init_db(db_type='mysql', site_name='LI-CMS'):
         # 最终提交
         db.session.commit()
         
-        print("纯净数据库初始化完成！作者QQ：575732563")
+        print("纯净数据库初始化完成！")
         print("管理员账号：")
         print("用户名：admin")
         print("密码：123456")
